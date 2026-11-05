@@ -27,6 +27,32 @@ Administrators can also issue a **Force Sync** instruction through the central c
 
 Computers that are offline receive pending instructions when they reconnect. Operations requiring a REAPER restart may be deferred to avoid interrupting active sessions.
 
+## Obsolete-package policy (upcoming ReaPackLab build)
+
+The hosted `ReaPackLab.ini` may optionally contain:
+
+```ini
+[Options]
+obsolete_packages=remove
+```
+
+Supported values are `remove` (the **default**, even when `[Options]` is omitted)
+and `keep`. When `remove` is selected, an approved full managed
+synchronization removes unpinned packages that are obsolete in a repository
+without prompting users or requiring Teacher Mode on individual computers.
+A failed synchronization must not proceed with obsolete-package cleanup.
+
+This is **not** the same operation as removing a repository from the approved
+list or retiring the standard ReaPack extension. Setup and SWS repair-only
+operations must not remove obsolete packages.
+
+**Rollout note:** Do not add `[Options]` to the *live* `ReaPackLab.ini` until
+all deployed clients support it. Existing clients with the strict older parser
+reject unknown INI sections and would stop applying managed updates. The new
+implementation defaults to `remove` without an explicit section, so no live
+configuration change is required for the default behavior. Increase
+`sync_version` when you want to perform a full synchronization.
+
 ## Administrative Control
 
 Individual users cannot:
