@@ -1,122 +1,144 @@
-# ReaPackLab Configuration
+# ReaPackLab — Central Configuration
 
-Centralized repository configuration and synchronization management for **ReaPackLab**, a managed version of [ReaPack](https://codeberg.org/cfillion/reapack) designed for classrooms, computer labs, and other managed REAPER environments.
+This repository holds the centrally managed configuration for
+[ReaPackLab](https://github.com/rockumk/ReaPackLab), a classroom/lab fork of
+[ReaPack](https://reapack.com/). Classroom computers read one hosted INI
+instead of asking students to manage repositories or update packages.
 
-## Purpose
+## Open the administrator utility
 
-ReaPackLab allows administrators to centrally manage software distribution across multiple REAPER installations without requiring individual users to configure repositories or initiate updates.
+**[Open ReaPackLab Admin — live web utility](https://rockumk.github.io/ReaPackLab-Config/)**
 
-This repository hosts configuration files that determine:
+[Direct link to the utility](https://rockumk.github.io/ReaPackLab-Config/ReaPackLab_Admin.html)
+· [View its HTML/JavaScript source](ReaPackLab_Admin.html)
 
-- Which ReaPack repositories are authorized.
-- When repository synchronization should occur.
-- Which configuration revision is currently active.
+The utility runs entirely in your browser. It does not need a GitHub login,
+send the teacher password to a server, edit the repository automatically, or
+install packages. You can also download the HTML file and open it locally.
 
-All packages from authorized repositories are installed automatically during administrator-directed synchronization.
+### Creating or updating the configuration
 
-## Synchronization
+1. Open **ReaPackLab Admin** using the live link above.
+2. Select **Import ReaPackLab.ini** and load the existing
+   [ReaPackLab.ini](ReaPackLab.ini). This preserves the existing salted
+   teacher-password verifier. Leave the password boxes blank unless you want
+   to change the password.
+3. Edit **list_version**, **sync_version**, the multiline repository list,
+   and the **Obsolete packages** option.
+4. Click **Validate repositories**, then **Generate configuration**.
+   Examine the generated text.
+5. **Copy** or **Download ReaPackLab.ini**, then manually commit the updated
+   text/file to this repository as `ReaPackLab.ini` on the `main` branch.
+   The utility does not publish the file to GitHub.
 
-ReaPackLab clients automatically check for management instructions:
+**Deployment caution:** Do not publish `xURL`, `-URL` in its new meaning,
+or an `[Options]` section until the computers reading this file have been
+upgraded to a version that supports them. Older versions interpreted `-URL`
+as unsubscribe-only and may reject `xURL` or `[Options]`. Roll out and
+test the new client before publishing a new-format configuration.
 
-- **At REAPER startup.**
-- **Every five minutes** while REAPER is running.
+## What ReaPackLab reads
 
-Clients synchronize only when the administrator has authorized a new synchronization revision.
+The active configuration is **[ReaPackLab.ini](ReaPackLab.ini)**, available to
+the REAPER extension at:
 
-Administrators can also issue a **Force Sync** instruction through the central configuration system, causing clients to synchronize at their next check even if the repository list hasn't changed.
+```text
+https://raw.githubusercontent.com/rockumk/ReaPackLab-Config/main/ReaPackLab.ini
+```
 
-Computers that are offline receive pending instructions when they reconnect. Operations requiring a REAPER restart may be deferred to avoid interrupting active sessions.
+Each managed Mac has a local file
+`/Library/Application Support/ReaPackLab/url.txt` containing that
+HTTPS URL (one line only). The hosted INI contains the revisions, teacher
+password verifier, options, and repository instructions.
 
-## Repository directive syntax (new development client)
+The earlier **`repositories.txt`** and **`sync.txt`** formats were
+superseded by this single INI and have been deleted from the repository.
 
-The plain URL list in `ReaPackLab.ini` supports:
+### Versions and synchronization
+
+| Setting | Purpose |
+| --- | --- |
+| `list_version` | Increase when changing the approved repository list or its directives. |
+| `sync_version` | Increase to request a managed synchronization, including when you want to resynchronize the same repositories. |
+
+The versions are independent; they do not need to be equal. ReaPackLab
+checks central instructions on startup and periodically while REAPER runs.
+Successful installations are retained even when another repository fails.
+All approved repositories are attempted; a failed repository does not stop
+attempts on later repositories. **The overall sync revision is marked
+complete only after a successful run**, so failures remain eligible for retry.
+Destructive repository cleanup is deferred while a sync has errors.
+
+### Repository instructions
+
+The `[Repositories]` section is one editable list of HTTPS index URLs:
 
 ```ini
 [Repositories]
-https://example.com/keep-subscribed/index.xml
-xhttps://example.com/keep-installed/index.xml
--https://example.com/uninstall-packages/index.xml
+https://example.com/active/index.xml
+xhttps://example.com/old/index.xml
+-https://example.com/unwanted/index.xml
 ```
 
-- **Plain URL** subscribes and installs updates.
-- **`xURL`** unsubscribes only, leaving installed packages and dependencies
-  untouched. No other repository is uninstalled.
-- **`-URL`** explicitly uninstalls packages *owned by that repository* in
-  ReaPackLab's registry, then unsubscribes. Deletion is postponed until other
-  repository work completes without errors. No cross-repository package
-  cleanup is performed.
+| Syntax | Meaning |
+| --- | --- |
+| Plain `https://…` | Subscribe and install/update packages. |
+| `xhttps://…` | **Unsubscribe only.** Keep packages, dependencies, and installed files; do not touch other repositories. |
+| `-https://…` | **Uninstall packages owned by that repository**, then unsubscribe. No dependency sweep or cross-repository uninstall. |
 
-Each URL may appear only once, even across different directive types.
-The built-in ReaPackLabSetup repository cannot be uninstalled using `-URL`.
+A URL cannot appear twice, including under different prefixes.
+An ambiguous package owner prevents destructive cleanup. The built-in
+ReaPackLabSetup repository cannot be removed by the hosted list.
 
-**Partial failure policy:** Every approved repository is attempted even if
-another repository cannot be downloaded or installed; successful updates are
-retained. Any failure leaves the central sync revision pending for retry.
-Failed repository downloads cannot trigger installation from stale indexes.
-Pending destructive `-URL` operations wait for a clean sync.
+**Safety note:** The new `x` and `-` behavior is implemented in the
+development client, but repository-uninstall behavior still needs live
+verification before classroom deployment. Do not trial `-` against a
+repository holding essential extensions or scripts.
 
-**Compatibility:** Current public clients may not understand `xURL` or the
-optional `[Options]` section. Do not publish either to the *live* hosted INI
-until updated clients are deployed on the classroom machines.
+### Obsolete-package policy
 
-The new offline editor is included in
-[ReaPackLabDev's tools directory](https://github.com/rockumk/ReaPackLabDev/blob/feature/setup-mutual-guard/tools/ReaPackLab_Admin.html).
-It generates `obsolete_packages=remove` or `obsolete_packages=keep` and
-supports both repository directives.
-
-## Obsolete-package policy (upcoming ReaPackLab build)
-
-The hosted `ReaPackLab.ini` may optionally contain:
+This is a separate question from removing a repository. When an index no
+longer lists an installed package, the central INI can specify:
 
 ```ini
 [Options]
 obsolete_packages=remove
 ```
 
-Supported values are `remove` (the **default**, even when `[Options]` is omitted)
-and `keep`. When `remove` is selected, an approved full managed
-synchronization removes unpinned packages that are obsolete in a repository
-without prompting users or requiring Teacher Mode on individual computers.
-A failed synchronization must not proceed with obsolete-package cleanup.
+`remove` (the **default**, even without the `[Options]` section) removes
+obsolete, unpinned packages during a successful managed synchronization
+without asking for a teacher password on each computer. Set
+`obsolete_packages=keep` to leave them installed. Cleanup is skipped
+when synchronization reports errors.
 
-This is **not** the same operation as removing a repository from the approved
-list or retiring the standard ReaPack extension. Setup and SWS repair-only
-operations must not remove obsolete packages.
+### ReaPackLabSetup
 
-**Rollout note:** Do not add `[Options]` to the *live* `ReaPackLab.ini` until
-all deployed clients support it. Existing clients with the strict older parser
-reject unknown INI sections and would stop applying managed updates. The new
-implementation defaults to `remove` without an explicit section, so no live
-configuration change is required for the default behavior. Increase
-`sync_version` when you want to perform a full synchronization.
+ReaPackLab has an internally configured source at
+[ReaPackLabSetup](https://github.com/rockumk/ReaPackLabSetup). The client
+attempts to synchronize that source even when it is not explicitly listed
+in the hosted INI. **ReaPackLabSetup is not yet a finished installable
+binary.** Its absence is expected during development and must not prevent
+other repositories from being attempted.
 
-## Administrative Control
+## Access and security
 
-Individual users cannot:
+The teacher password is represented by a salted PBKDF2-HMAC-SHA-256
+verifier, not stored as plaintext in the INI. Because this repository is
+public, the verifier is publicly readable and could be subjected to
+offline password guessing; use a strong, unique password.
 
-- Add, modify, or remove repositories.
-- Manually install, update, or uninstall packages through ReaPackLab.
-- Initiate synchronization.
-- Modify the central management configuration.
+HTTPS authenticates transport but **the current development configuration
+is not independently digitally signed**. Restrict write access to this
+repository. Standard/student users should not be able to change their
+central configuration or trigger their own managed package operations.
 
-## Security
+## Related repositories
 
-Management instructions will be digitally signed and verified by clients to prevent unauthorized changes.
-
-Private signing keys are never stored in this public repository.
-
-## Related Projects
-
-- **ReaPackLab** — The centrally managed REAPER extension.
-- **ReaBootLab** — A planned installer for managed REAPER environments.
-- **ReaPack** — The original open-source package manager developed by Christophe Fillon.
+- [ReaPackLab](https://github.com/rockumk/ReaPackLab) — public extension distribution
+- [ReaPackLabDev](https://github.com/rockumk/ReaPackLabDev) — development and tests
+- [ReaPackLabSetup](https://github.com/rockumk/ReaPackLabSetup) — planned installer/repair companion
 
 ## License
 
-This configuration repository is licensed under the MIT License.
-
-The modified ReaPackLab extension is separately governed by ReaPack's applicable LGPL licensing requirements.
-
-## Project Status
-
-ReaPackLab is under development. Configuration formats and synchronization behavior may change.
+The configuration repository is MIT licensed (see [LICENSE](LICENSE)).
+The ReaPackLab extension is separately subject to its LGPL licensing.
