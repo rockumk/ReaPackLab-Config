@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReaPackLab — Administrator Configuration Generator</title>
+<style>
+:root{color-scheme:light;--bg:#f3f5f9;--paper:#fff;--ink:#192638;--sub:#516176;--edge:#d6dfeb;--blue:#2459ac;--light:#eef3fc;--red:#a32738;--green:#13643b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.48 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1000px;margin:28px auto 60px;padding:0 20px}header{margin-bottom:19px}h1{font-size:1.85rem;margin:0 0 5px}h2{font-size:1.13rem;margin:0 0 12px}p{margin:6px 0 12px}.muted{color:var(--sub)}.panel{background:var(--paper);border:1px solid var(--edge);border-radius:12px;padding:21px 24px;margin:16px 0;box-shadow:0 1px 4px #182e4710}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.field label{font-weight:650;display:block;margin:0 0 5px}input,textarea,select{font:inherit;border-radius:7px;border:1px solid #adbacb;padding:10px 11px;color:var(--ink);background:#fff;width:100%}input:focus,textarea:focus,select:focus{outline:2px solid #b1cef7;outline-offset:1px}textarea{resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55}#repositories{min-height:310px}#output{min-height:300px;background:#f8faff}.hint{font-size:.9rem;color:var(--sub);margin:5px 0 0}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px;align-items:center}button,.filebutton{cursor:pointer;border:1px solid var(--blue);background:var(--blue);color:white;border-radius:7px;font:650 14px system-ui,sans-serif;padding:10px 14px;display:inline-block}button.secondary,.filebutton.secondary{background:var(--paper);color:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}button:hover:not(:disabled),.filebutton:hover{filter:brightness(.94)}.status{font-size:.92rem;margin:9px 0 0;min-height:1.3rem;color:var(--sub)}.status.error{color:var(--red)}.status.ok{color:var(--green)}code{background:#eef2f7;border-radius:3px;padding:1px 4px;font-size:.9em}.note{background:var(--light);padding:11px 14px;border-radius:7px;font-size:.92rem}.footer{color:var(--sub);font-size:.9rem;margin-top:17px}.count{font-size:.9rem;color:var(--sub)}#fileInput{display:none}.checkline{display:flex;gap:9px;align-items:center;margin:12px 0}.checkline input{width:auto}input[type=password]{font-family:inherit}@media(max-width:640px){.grid{grid-template-columns:1fr}.panel{padding:16px}main{padding:0 12px}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>ReaPackLab Administrator Configuration Generator</h1><p class="muted">Create one human-editable <strong>ReaPackLab.ini</strong> file. Everything runs locally in your browser; nothing is uploaded.</p></header>
+<section class="panel" aria-labelledby="versionsTitle">
+<h2 id="versionsTitle">1. Versions</h2>
+<div class="grid">
+<div class="field"><label for="listVersion">Repository list version</label><input type="number" min="0" max="2147483647" step="1" id="listVersion" value="1"><p class="hint">Increase after adding or removing repositories. ReaPackLab applies the new list and synchronizes.</p></div>
+<div class="field"><label for="syncVersion">Synchronization version</label><input type="number" min="0" max="2147483647" step="1" id="syncVersion" value="1"><p class="hint">Increase to synchronize packages again without changing the repository list.</p></div>
+</div>
+<p class="note">The numbers are <strong>independent</strong>; they do not need to match. When neither increases, checking the hosted configuration does not trigger a package sync. Teacher Mode's <strong>Force Sync</strong> will be implemented in the extension and affects only that computer.</p>
+</section>
+<section class="panel" aria-labelledby="passwordTitle">
+<h2 id="passwordTitle">2. Teacher Mode password</h2>
+<p class="muted">Enter a password to create a salted verifier. Minimum <strong>6 characters</strong> (8+ recommended). The password itself is never included in the configuration.</p>
+<div class="grid"><div class="field"><label for="password">Teacher password</label><input id="password" type="password" autocomplete="new-password" placeholder="Enter password"></div><div class="field"><label for="confirmation">Confirm password</label><input id="confirmation" type="password" autocomplete="new-password" placeholder="Repeat password"></div></div>
+<label class="checkline"><input id="showPassword" type="checkbox"> Show password</label>
+<p class="hint">When you import an existing configuration, you can leave both password fields blank to keep its existing verifier. To change the password, enter and confirm the new password.</p>
+<div id="passwordStatus" class="status" role="status" aria-live="polite">Password derivation: PBKDF2-HMAC-SHA-256, 600,000 iterations, random 32-byte salt, 32-byte hash.</div>
+</section>
+<section class="panel" aria-labelledby="reposTitle">
+<h2 id="reposTitle">3. Repository list</h2>
+<p class="muted">One entry per line, all in <strong>one text field</strong>. Paste plain <code>https://.../index.xml</code> URLs directly—no name or <code>repository=</code> prefix needed. Prefix <code>x</code> to unsubscribe without removing any installed packages, or <code>-</code> to uninstall packages owned by that repository and unsubscribe. For example, <code>xhttps://.../old/index.xml</code> or <code>-https://.../unwanted/index.xml</code>. Blank lines and <code>#</code> comments are allowed.</p>
+<label for="repositories" class="hint">Repository entries (maximum 128)</label>
+<textarea id="repositories" spellcheck="false" placeholder="https://raw.githubusercontent.com/rockumk/AHS_Music_Tech/master/index.xml&#10;https://raw.githubusercontent.com/ReaTeam/Extensions/master/index.xml&#10;xhttps://example.com/OldRepository/index.xml&#10;-https://example.com/RemovePackages/index.xml"></textarea>
+<div class="actions"><button type="button" id="validate" class="secondary">Validate repositories</button><label for="fileInput" class="filebutton secondary">Import ReaPackLab.ini</label><input id="fileInput" type="file" accept=".ini,.txt,text/plain"></div>
+<div id="repositoryStatus" class="status" role="status" aria-live="polite">Plain URLs subscribe; xURL unsubscribes with no package removal; -URL uninstalls packages owned by that repository and unsubscribes. No entry may appear twice.</div>
+</section>
+<section class="panel" aria-labelledby="optionsTitle">
+<h2 id="optionsTitle">4. Package cleanup options</h2>
+<div class="field"><label for="obsoletePackages">Obsolete packages (removed from a repository's index)</label>
+<select id="obsoletePackages"><option value="remove" selected>Remove automatically (default)</option><option value="keep">Keep installed packages</option></select>
+<p class="hint">When a previously installed package is no longer offered by a subscribed repository, select whether it should be removed during a successful managed sync. This is separate from xURL and -URL repository directives.</p></div>
+<p class="note"><strong>Deployment:</strong> Older ReaPackLab versions reject the new [Options] section and xURL prefix. Deploy the updated extension to your Macs before publishing a newly generated configuration.</p>
+</section>
+<section class="panel" aria-labelledby="outputTitle">
+<h2 id="outputTitle">5. Generated configuration</h2>
+<p class="muted">Generate, inspect, copy, or download the single configuration file. This is plain text and can be edited manually after downloading.</p>
+<div class="actions"><button id="generate" type="button">Generate configuration</button><button id="copy" class="secondary" type="button" disabled>Copy configuration</button><button id="download" type="button" disabled>Download ReaPackLab.ini</button></div>
+<div id="outputStatus" class="status" role="status" aria-live="polite">Generate to preview your configuration.</div>
+<label for="output" class="hint">ReaPackLab.ini (editable preview; edits here are included when copying or downloading)</label>
+<textarea id="output" spellcheck="false" placeholder="Your configuration appears here after generating."></textarea>
+</section>
+<p class="footer"><strong>Implementation contract:</strong> ReaPackLab must parse this exact <code>REAPACKLAB-CONFIG/1</code> format: <code>xURL</code> unsubscribes without uninstalling, <code>-URL</code> uninstalls packages owned by that repository, and <code>obsolete_packages=remove|keep</code> controls obsolete package cleanup. The extension stores successfully applied versions and verifies the password using PBKDF2. The HTML alone does not change the extension. Host the file at a trusted HTTPS URL. A publicly readable password hash can be attacked offline, so a longer password is preferable even though the minimum is six characters.</p>
+</main>
+<script>
+'use strict';
+(() => {
+  const $ = id => document.getElementById(id);
+  const MAX_REPOS = 128;
+  const ITERATIONS = 600000;
+  let currentAuth = null;
+  let generated = false;
+  const enc = new TextEncoder();
+  function status(id, text, kind = '') { const el = $(id); el.textContent = text; el.className = 'status' + (kind ? ' ' + kind : ''); }
+  function bytesHex(bytes) { return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(''); }
+  function validVersion(id) {
+    const text = $(id).value.trim();
+    if (!/^(0|[1-9]\d*)$/.test(text)) throw Error(`${id === 'listVersion' ? 'Repository list' : 'Synchronization'} version must be a nonnegative integer.`);
+    const n = Number(text);
+    if (!Number.isSafeInteger(n) || n > 2147483647) throw Error('Version must not exceed 2,147,483,647.');
+    return n;
+  }
+  function validateUrl(value, lineNumber) {
+    let url;
+    try { url = new URL(value); } catch { throw Error(`Line ${lineNumber}: invalid URL.`); }
+    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || value.includes(' ')) throw Error(`Line ${lineNumber}: use an HTTPS URL without spaces or credentials.`);
+    return url.href;
+  }
+  function parseRepos(raw) {
+    const records = [], seen = new Set();
+    for (const [index, original] of raw.replace(/\r\n?/g, '\n').split('\n').entries()) {
+      let line = original.trim();
+      if (!line || line.startsWith('#') || line.startsWith(';')) continue;
+      const operation = line.startsWith('-') ? 'uninstall' : line.startsWith('x') ? 'unsubscribe' : 'subscribe';
+      if (operation !== 'subscribe') line = line.slice(1).trim();
+      if (line.includes('|') || /^repository\s*=/i.test(line)) throw Error(`Line ${index+1}: enter a repository URL (optional prefix x or -).`);
+      const url = validateUrl(line, index+1);
+      const key = url.toLowerCase();
+      if (seen.has(key)) throw Error(`Line ${index+1}: duplicate repository URL (including conflicting add/remove entries).`);
+      seen.add(key);
+      records.push({operation, url});
+      if (records.length > MAX_REPOS) throw Error(`More than ${MAX_REPOS} repository instructions.`);
+    }
+    return records;
+  }
+  function authIsValid(auth) {
+    return !!auth && auth.algorithm === 'PBKDF2-HMAC-SHA-256' && auth.iterations === ITERATIONS && /^[a-f0-9]{64}$/i.test(auth.salt) && /^[a-f0-9]{64}$/i.test(auth.hash);
+  }
+  async function derive(password) {
+    if (!globalThis.crypto || !crypto.subtle || !crypto.getRandomValues) throw Error('Secure browser cryptography is unavailable. Try a current Safari, Chrome, or Firefox browser, opening this file directly.');
+    const salt = crypto.getRandomValues(new Uint8Array(32));
+    const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+    const derived = await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:ITERATIONS,hash:'SHA-256'}, key, 256);
+    return {algorithm:'PBKDF2-HMAC-SHA-256',iterations:ITERATIONS,salt:bytesHex(salt),hash:bytesHex(new Uint8Array(derived))};
+  }
+  function makeFile(list, sync, auth, repos, obsolete) {
+    const lines = [
+      'REAPACKLAB-CONFIG/1',
+      '# ReaPackLab managed configuration',
+      '# Increment list_version after changing repositories; increment sync_version to sync unchanged repositories.',
+      '[Versions]',`list_version=${list}`,`sync_version=${sync}`,'',
+      '[Authentication]',`algorithm=${auth.algorithm}`,`iterations=${auth.iterations}`,`salt=${auth.salt}`,`hash=${auth.hash}`,'',
+      '[Options]',`obsolete_packages=${obsolete}`,'',
+      '[Repositories]',
+      '# Plain URL: subscribe | xURL: unsubscribe without uninstall | -URL: uninstall owned packages then unsubscribe',
+      ...repos.map(r => (r.operation === 'unsubscribe' ? 'x' : r.operation === 'uninstall' ? '-' : '') + r.url),''
+    ];
+    return lines.join('\n');
+  }
+  function parseConfig(text) {
+    const lines = text.replace(/\r\n?/g,'\n').split('\n');
+    if (lines[0].trim() !== 'REAPACKLAB-CONFIG/1') throw Error('Not a REAPACKLAB-CONFIG/1 file.');
+    let section = '', repoLines = [];
+    const versions = {}, auth = {}, options = {obsolete_packages:'remove'};
+    for (const line of lines.slice(1)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';')) continue;
+      if (/^\[[^\]]+\]$/.test(trimmed)) { section = trimmed.slice(1,-1); if(!['Versions','Authentication','Options','Repositories'].includes(section)) throw Error('Unknown configuration section: '+section); continue; }
+      if (section === 'Repositories') { repoLines.push(trimmed); continue; }
+      if (section === 'Versions' || section === 'Authentication' || section === 'Options') {
+        const eq = trimmed.indexOf('=');
+        if (eq < 1) throw Error(`Invalid key/value line: ${trimmed.slice(0,60)}`);
+        (section === 'Versions' ? versions : section === 'Authentication' ? auth : options)[trimmed.slice(0,eq).trim()] = trimmed.slice(eq+1).trim();
+      }
+    }
+    if (!/^(0|[1-9]\d*)$/.test(versions.list_version || '') || !/^(0|[1-9]\d*)$/.test(versions.sync_version || '')) throw Error('Imported configuration has invalid versions.');
+    const importedAuth = {algorithm:auth.algorithm,iterations:Number(auth.iterations),salt:auth.salt,hash:auth.hash};
+    if (!authIsValid(importedAuth)) throw Error('Imported configuration has an unsupported or invalid password verifier.');
+    if (!['remove','keep'].includes(options.obsolete_packages)) throw Error('Unsupported obsolete_packages value in imported configuration.');
+    parseRepos(repoLines.join('\n'));
+    return {list:versions.list_version,sync:versions.sync_version,auth:importedAuth,repos:repoLines.join('\n'),obsolete:options.obsolete_packages};
+  }
+  $('showPassword').addEventListener('change', () => {
+    $('password').type = $('confirmation').type = $('showPassword').checked ? 'text' : 'password';
+  });
+  $('validate').addEventListener('click', () => {
+    try {const r = parseRepos($('repositories').value); const subscribe=r.filter(x=>x.operation==='subscribe').length; const unsub=r.filter(x=>x.operation==='unsubscribe').length; const uninstall=r.filter(x=>x.operation==='uninstall').length; status('repositoryStatus',`Valid: ${subscribe} subscribed; ${unsub} unsubscribe-only; ${uninstall} uninstall-and-unsubscribe.`, 'ok');}
+    catch(e){status('repositoryStatus', e.message,'error');}
+  });
+  $('generate').addEventListener('click', async () => {
+    const button = $('generate');
+    button.disabled = true;
+    try {
+      const list=validVersion('listVersion'), sync=validVersion('syncVersion');
+      const repos=parseRepos($('repositories').value);
+      const pw=$('password').value, confirm=$('confirmation').value;
+      let auth=currentAuth;
+      if (pw || confirm) {
+        if (pw !== confirm) throw Error('Password and confirmation do not match.');
+        if (Array.from(pw).length < 6) throw Error('Password must contain at least 6 characters.');
+        status('passwordStatus','Generating password verifier…');
+        auth = await derive(pw);
+        currentAuth = auth;
+        $('password').value = $('confirmation').value = '';
+        status('passwordStatus','New password verifier generated and retained for this editing session.','ok');
+      } else if (!authIsValid(auth)) throw Error('Enter and confirm a teacher password before generating the initial configuration.');
+      $('output').value = makeFile(list,sync,auth,repos,$('obsoletePackages').value);
+      generated = true;
+      $('copy').disabled = $('download').disabled = false;
+      status('outputStatus',`Ready: ${repos.filter(r=>r.operation==='subscribe').length} subscribed, ${repos.filter(r=>r.operation==='unsubscribe').length} unsubscribe-only, ${repos.filter(r=>r.operation==='uninstall').length} uninstall-and-unsubscribe; obsolete packages: ${$('obsoletePackages').value}.`, 'ok');
+    } catch(e) {status('outputStatus',e.message,'error');}
+    finally {button.disabled = false;}
+  });
+  $('output').addEventListener('input', () => { if (generated) status('outputStatus','Preview edited manually. Download/copy uses exactly the text shown here.',''); });
+  $('copy').addEventListener('click', async () => {
+    try {
+      const content=$('output').value;
+      if (!content) throw Error('No configuration to copy.');
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(content);
+      else { $('output').focus();$('output').select();if(!document.execCommand('copy'))throw Error('Clipboard unavailable. Select the text and copy it manually.'); }
+      status('outputStatus','Configuration copied.','ok');
+    } catch(e) {status('outputStatus',e.message,'error');}
+  });
+  $('download').addEventListener('click', () => {
+    const data=$('output').value;
+    if (!data) {status('outputStatus','Generate the configuration first.','error');return;}
+    const blob = new Blob([data],{type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='ReaPackLab.ini';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    status('outputStatus','ReaPackLab.ini download requested.','ok');
+  });
+  $('fileInput').addEventListener('change', async () => {
+    const file=$('fileInput').files?.[0];if(!file)return;
+    try {
+      const data=parseConfig(await file.text());
+      $('listVersion').value=data.list;$('syncVersion').value=data.sync;$('repositories').value=data.repos;$('obsoletePackages').value=data.obsolete;
+      currentAuth=data.auth;$('password').value=$('confirmation').value='';
+      $('output').value='';generated=false;$('copy').disabled=$('download').disabled=true;
+      status('passwordStatus','Imported existing verifier. Leave passwords blank to retain it, or enter a replacement.','ok');
+      status('repositoryStatus','Imported and validated ReaPackLab.ini.','ok');
+      status('outputStatus','Imported configuration loaded. Select Generate configuration to create a new file.','ok');
+    } catch(e) {status('repositoryStatus',e.message,'error');}
+    finally {$('fileInput').value='';}
+  });
+})();
+</script>
+</body>
+</html>
