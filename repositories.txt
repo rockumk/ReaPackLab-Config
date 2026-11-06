@@ -1,4 +1,0 @@
-REAPACKLAB-REPOS/1
-revision=2
-repository=AHS Music Tech|https://raw.githubusercontent.com/rockumk/AHS_Music_Tech/master/index.xml
-repository=ReaTeam Extensions|https://raw.githubusercontent.com/ReaTeam/Extensions/master/index.xml
