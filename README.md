@@ -27,6 +27,43 @@ Administrators can also issue a **Force Sync** instruction through the central c
 
 Computers that are offline receive pending instructions when they reconnect. Operations requiring a REAPER restart may be deferred to avoid interrupting active sessions.
 
+## Repository directive syntax (new development client)
+
+The plain URL list in `ReaPackLab.ini` supports:
+
+```ini
+[Repositories]
+https://example.com/keep-subscribed/index.xml
+xhttps://example.com/keep-installed/index.xml
+-https://example.com/uninstall-packages/index.xml
+```
+
+- **Plain URL** subscribes and installs updates.
+- **`xURL`** unsubscribes only, leaving installed packages and dependencies
+  untouched. No other repository is uninstalled.
+- **`-URL`** explicitly uninstalls packages *owned by that repository* in
+  ReaPackLab's registry, then unsubscribes. Deletion is postponed until other
+  repository work completes without errors. No cross-repository package
+  cleanup is performed.
+
+Each URL may appear only once, even across different directive types.
+The built-in ReaPackLabSetup repository cannot be uninstalled using `-URL`.
+
+**Partial failure policy:** Every approved repository is attempted even if
+another repository cannot be downloaded or installed; successful updates are
+retained. Any failure leaves the central sync revision pending for retry.
+Failed repository downloads cannot trigger installation from stale indexes.
+Pending destructive `-URL` operations wait for a clean sync.
+
+**Compatibility:** Current public clients may not understand `xURL` or the
+optional `[Options]` section. Do not publish either to the *live* hosted INI
+until updated clients are deployed on the classroom machines.
+
+The new offline editor is included in
+[ReaPackLabDev's tools directory](https://github.com/rockumk/ReaPackLabDev/blob/feature/setup-mutual-guard/tools/ReaPackLab_Admin.html).
+It generates `obsolete_packages=remove` or `obsolete_packages=keep` and
+supports both repository directives.
+
 ## Obsolete-package policy (upcoming ReaPackLab build)
 
 The hosted `ReaPackLab.ini` may optionally contain:
